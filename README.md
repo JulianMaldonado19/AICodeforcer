@@ -90,6 +90,44 @@ src/AICodeforcer/
 - pydantic >= 2.0
 - python-dotenv >= 1.2.1
 
+---
+
+## Ethical Declaration | 诚信宣言 | 君子之約
+
+### English
+
+> *The sword forged for the training hall shall not be drawn where honor hangs in the balance.*
+
+This project exists as a crucible for learning — to witness the elegant dance of algorithms, to comprehend the silent poetry woven into logic. It is a mirror, not a mask; a teacher, not a surrogate.
+
+To wield it in competition is to claim a crown of smoke, for victory without struggle is but the shadow of triumph. The laurels earned through borrowed wisdom shall wither before they are worn.
+
+**Let your mind be the true solver. Let this tool be merely the whetstone upon which you sharpen your own blade.**
+
+### 中文
+
+> *习武之剑，不可执于论道之堂；练兵之器，不可持于争锋之场。*
+
+此项目为学习而生——让你得以窥见算法的曼妙之舞，领悟逻辑深处的无声诗篇。它是一面镜子，而非一张面具；是一位导师，而非替身。
+
+若以此器竞于赛场，所摘不过是烟云编织的桂冠。不经磨砺的胜利，不过是荣耀的倒影。借来的智慧所铸的勋章，未及佩戴便已黯然失色。
+
+**愿君以心为剑，以此为砺石，磨砺属于自己的锋芒。**
+
+### 文言
+
+> *器者，習藝之資也，非爭勝之具也。*
+
+此器之造，為明算理、窮邏輯之奧也。若持以赴試，竊人之功為己有，是欺世盜名之行，君子所不齒也。
+
+古人云：「學如逆水行舟，不進則退。」又云：「君子務本，本立而道生。」
+
+夫以械代心，猶飲鴆止渴，雖解一時之困，終貽無窮之患。所得者，虛名也；所失者，真學也。名可欺人，學不可欺己。
+
+**願諸君以誠為本，以學為先。器可助學，不可代學；技可借鑒，不可竊取。慎之戒之。**
+
+---
+
 ## License
 
 MIT
