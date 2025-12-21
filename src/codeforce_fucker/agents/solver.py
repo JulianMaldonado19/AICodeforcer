@@ -2,11 +2,15 @@
 
 import os
 import re
-from typing import Callable
+from datetime import datetime
+from pathlib import Path
+from typing import Callable, TextIO
 
 from google import genai
 from google.genai import types
 
+from codeforce_fucker.agents.brute_force import BruteForceGenerator
+from codeforce_fucker.agents.cpp_translator import CppTranslator
 from codeforce_fucker.tools import run_python_code, stress_test
 
 SYSTEM_PROMPT = """你是一名**顶级 ICPC / CCPC 竞赛算法助手**。
@@ -20,7 +24,8 @@ SYSTEM_PROMPT = """你是一名**顶级 ICPC / CCPC 竞赛算法助手**。
 ## 可用工具
 
 1. `run_python_code(code, test_input)` - 执行代码并返回输出
-2. `stress_test(solution_code, brute_force_code, generator_code)` - 对拍验证（固定 2000 次测试）
+2. `stress_test(solution_code)` - 对拍验证（固定 1000 次测试）
+   - **注意**：暴力算法和数据生成器已由系统独立生成，你只需提供 `solution_code`
 
 ---
 
@@ -79,36 +84,13 @@ SYSTEM_PROMPT = """你是一名**顶级 ICPC / CCPC 竞赛算法助手**。
 * 避免递归爆栈。
 
 ### (7) 对拍验证（提交前必须执行）
-在输出最终代码前，你**必须**：
-1. 编写一个 **暴力算法** (brute_force_code)
-2. 编写一个 **数据生成器** (generator_code)
-3. 调用 `stress_test(solution_code, brute_force_code, generator_code)` 进行对拍（固定 2000 次）
-4. 如果发现反例，分析并修正优化算法
-5. **修正后必须重新调用 `stress_test` 验证**，不能跳过
-6. 重复步骤 3-5 直到对拍通过（返回 "STRESS TEST PASSED"）
+在输出最终代码前，你**必须**调用 `stress_test(solution_code)` 进行对拍验证。
 
-**暴力算法要求（极其重要）**：
-- **必须使用最朴素的暴力枚举**，不能有任何优化或贪心
-- **必须是 O(n!) / O(2^n) / O(n^3) 等确定正确的穷举**
-- 例如：枚举所有排列、枚举所有子集、三重循环枚举所有组合
-- **禁止**在暴力算法中使用任何"聪明"的优化或剪枝
-- **禁止**暴力算法和优化算法使用相同的核心逻辑
-- 暴力算法的唯一目的是**保证正确性**，不考虑效率
-
-**数据生成器要求**：
-- 必须生成**小规模数据**（n ≤ 15），确保暴力算法能在合理时间内运行
-- 必须覆盖**边界情况**：最小值、最大值、全相同、递增、递减等
-- 必须有**足够的随机性**
-
-**数据生成器模板**：
-```python
-import random
-n = random.randint(1, 12)  # 小规模数据，确保暴力能跑
-print(n)
-print(' '.join(str(random.randint(1, 100)) for _ in range(n)))
-```
-
-**重要**：每次修改代码后都必须重新对拍验证，不能假设修正后就正确了。
+**重要说明**：
+- 暴力算法和数据生成器已由系统在独立会话中生成
+- 你只需提供优化后的 `solution_code`
+- 系统会自动使用预生成的暴力代码进行对拍
+- 如果发现反例，分析并修正你的优化算法，然后重新调用 `stress_test`
 
 ### (8) 最终提交代码
 * 输出完整、可直接提交的 **Python 代码**；
@@ -132,6 +114,12 @@ print(' '.join(str(random.randint(1, 100)) for _ in range(n)))
 ### 输入输出规范
 - 从标准输入读取数据（使用 `input()` 或 `sys.stdin`）
 - 输出结果到标准输出（使用 `print()`）
+- **输出格式是协议（极其重要）**：
+  - 输出必须与题目要求**完全一致**，包括格式、分隔符、换行等
+  - 若题目要求输出 k 个整数，必须使用 `print(*ans)` 或 `print(' '.join(map(str, ans)))`
+  - **严禁**输出聚合值（如 `print(sum(ans))`、`print(len(ans))`）
+  - **严禁**输出调试信息、额外说明、或任何题目未要求的内容
+  - 输出格式错误 = WA，即使算法逻辑正确也会被判错
 - 注意处理边界情况（空输入、最大值、负数、重复元素等）
 - 如果超时，考虑优化算法复杂度或使用更高效的数据结构
 - 对于大量输入，使用 `sys.stdin.readline()` 代替 `input()`
@@ -152,7 +140,7 @@ print(' '.join(str(random.randint(1, 100)) for _ in range(n)))
 **严格要求**：你**必须**完成以下步骤才能输出 "ALL_TESTS_PASSED"：
 
 1. **必须调用 `run_python_code` 工具**测试题目给出的**所有样例**，且**全部通过**
-2. **必须调用 `stress_test` 工具**进行对拍验证（固定 2000 次）
+2. **必须调用 `stress_test` 工具**进行对拍验证（固定 1000 次）
 3. **必须看到 "STRESS TEST PASSED" 返回**才算对拍通过
 4. 只有当上述步骤都完成且通过后，才能输出 "ALL_TESTS_PASSED"
 
@@ -193,24 +181,16 @@ TOOL_DECLARATIONS = [
         ),
         types.FunctionDeclaration(
             name="stress_test",
-            description="对拍验证工具：比较优化算法和暴力算法的输出，用于验证算法正确性。固定运行 2000 次测试。三段代码均须完整自包含；solution/brute_force 从 stdin 读取、向 stdout 输出；generator 仅向 stdout 输出测试数据；禁止第三方库；不得依赖对话上下文或先前代码。",
+            description="对拍验证工具：比较你的优化算法和系统预生成的暴力算法的输出。固定运行 1000 次测试。你只需提供 solution_code，暴力算法和数据生成器已由系统在独立会话中生成。代码必须完整自包含，从 stdin 读取、向 stdout 输出。",
             parameters=types.Schema(
                 type=types.Type.OBJECT,
                 properties={
                     "solution_code": types.Schema(
                         type=types.Type.STRING,
-                        description="要验证的优化算法代码",
-                    ),
-                    "brute_force_code": types.Schema(
-                        type=types.Type.STRING,
-                        description="暴力算法代码（作为正确性基准）",
-                    ),
-                    "generator_code": types.Schema(
-                        type=types.Type.STRING,
-                        description="随机数据生成器代码",
+                        description="要验证的优化算法代码（完整自包含，从 stdin 读取，输出到 stdout）",
                     ),
                 },
-                required=["solution_code", "brute_force_code", "generator_code"],
+                required=["solution_code"],
             ),
         ),
     ])
@@ -225,6 +205,7 @@ class AlgorithmSolver:
         api_key: str | None = None,
         base_url: str | None = None,
         model: str | None = None,
+        log_dir: str | None = None,
     ):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         if not self.api_key:
@@ -246,13 +227,157 @@ class AlgorithmSolver:
         self._last_verified_code: str | None = None
         self._last_code: str | None = None
 
+        # 日志功能
+        self._log_dir = Path(log_dir) if log_dir else Path("logs")
+        self._log_file: TextIO | None = None
+        self._log_path: Path | None = None
+
+        # 暴力算法生成器（独立会话）
+        self._brute_force_generator = BruteForceGenerator(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            model=self.model,
+        )
+        self._brute_force_code: str | None = None
+        self._generator_code: str | None = None
+
+        # C++ 翻译器
+        self._cpp_translator = CppTranslator(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            model=self.model,
+        )
+        self._cpp_code: str | None = None
+
+    def _init_log(self, problem_text: str) -> None:
+        """初始化日志文件。"""
+        self._log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._log_path = self._log_dir / f"solve_{timestamp}.log"
+        self._log_file = open(self._log_path, "w", encoding="utf-8")
+        self._log(f"{'='*80}")
+        self._log(f"AICodeforcer 求解日志")
+        self._log(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        self._log(f"模型: {self.model}")
+        self._log(f"{'='*80}")
+        self._log(f"\n{'='*80}")
+        self._log("题目内容")
+        self._log(f"{'='*80}")
+        self._log(problem_text)
+        self._log(f"{'='*80}\n")
+
+    def _log(self, message: str) -> None:
+        """写入日志。"""
+        if self._log_file:
+            self._log_file.write(message + "\n")
+            self._log_file.flush()
+
+    def _log_tool_call(self, func_name: str, func_args: dict, result: str) -> None:
+        """记录工具调用详情。"""
+        self._log(f"\n{'='*80}")
+        self._log(f"工具调用: {func_name}")
+        self._log(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        self._log(f"{'='*80}")
+
+        if func_name == "run_python_code":
+            self._log("\n--- 代码 ---")
+            self._log(func_args.get("code", ""))
+            self._log("\n--- 输入 ---")
+            self._log(func_args.get("test_input", ""))
+        elif func_name == "stress_test":
+            self._log("\n--- 优化算法代码 (solution_code) ---")
+            self._log(func_args.get("solution_code", ""))
+            self._log("\n--- 暴力算法代码 (brute_force_code) ---")
+            self._log(func_args.get("brute_force_code", ""))
+            self._log("\n--- 数据生成器代码 (generator_code) ---")
+            self._log(func_args.get("generator_code", ""))
+
+        self._log("\n--- 执行结果 ---")
+        self._log(result)
+        self._log(f"{'='*80}\n")
+
+    def _log_response(self, turn: int, response_text: str) -> None:
+        """记录模型响应。"""
+        self._log(f"\n{'='*80}")
+        self._log(f"Turn {turn} - 模型响应")
+        self._log(f"{'='*80}")
+        self._log(response_text)
+        self._log(f"{'='*80}\n")
+
+    def _close_log(self) -> None:
+        """关闭日志文件。"""
+        if self._log_file:
+            self._log(f"\n{'='*80}")
+            self._log(f"日志结束: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            self._log(f"{'='*80}")
+            self._log_file.close()
+            self._log_file = None
+            print(f"\n[日志] 已保存到: {self._log_path}")
+
     def solve(
         self,
         problem_text: str,
         max_attempts: int = 20,
         on_attempt: Callable[[int, str], None] | None = None,
-    ) -> tuple[str | None, bool]:
-        """Solve an algorithm problem with manual tool handling."""
+    ) -> tuple[str | None, str | None, bool]:
+        """Solve an algorithm problem with manual tool handling.
+
+        Returns:
+            (python_code, cpp_code, success) 元组
+        """
+        # 初始化日志
+        self._init_log(problem_text)
+
+        try:
+            return self._solve_impl(problem_text, max_attempts, on_attempt)
+        finally:
+            self._close_log()
+
+    def _translate_to_cpp(self, python_code: str | None) -> str | None:
+        """将 Python 代码翻译成 C++。"""
+        if not python_code:
+            return None
+
+        cpp_code = self._cpp_translator.translate(python_code)
+        if cpp_code:
+            self._cpp_code = cpp_code
+            self._log("\n--- C++ 翻译结果 ---")
+            self._log(cpp_code)
+        else:
+            self._log("[翻译] C++ 翻译失败")
+
+        return cpp_code
+
+    def _solve_impl(
+        self,
+        problem_text: str,
+        max_attempts: int,
+        on_attempt: Callable[[int, str], None] | None,
+    ) -> tuple[str | None, str | None, bool]:
+        """实际的求解逻辑。"""
+        # 在独立会话中并行生成暴力算法，并进行一致性验证
+        print("\n[预处理] 启动三重验证生成暴力算法...")
+        self._log("[预处理] 开始三重验证生成暴力算法和数据生成器")
+
+        brute_result = self._brute_force_generator.generate_with_consensus(
+            problem_text,
+            num_agents=3,
+            validation_rounds=10,
+        )
+        if brute_result:
+            self._brute_force_code, self._generator_code = brute_result
+            self._log(f"[预处理] 暴力算法生成成功 ({len(self._brute_force_code)} 字符)")
+            self._log(f"[预处理] 数据生成器生成成功 ({len(self._generator_code)} 字符)")
+            self._log("\n--- 暴力算法代码 ---")
+            self._log(self._brute_force_code)
+            self._log("\n--- 数据生成器代码 ---")
+            self._log(self._generator_code)
+        else:
+            print("[预处理] 警告：暴力算法生成失败，对拍功能将不可用")
+            self._log("[预处理] 警告：暴力算法生成失败")
+            self._brute_force_code = None
+            self._generator_code = None
+
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
             tools=TOOL_DECLARATIONS,
@@ -292,6 +417,7 @@ class AlgorithmSolver:
                     break
                 except Exception as e:
                     print(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
+                    self._log(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
                     if retry == 29:
                         raise
                     import time
@@ -303,6 +429,7 @@ class AlgorithmSolver:
             candidate = response.candidates[0] if response.candidates else None
             if not candidate or not candidate.content:
                 print(f"[Turn {turn + 1}] 无响应内容")
+                self._log(f"[Turn {turn + 1}] 无响应内容")
                 break
 
             response_content = candidate.content
@@ -333,6 +460,9 @@ class AlgorithmSolver:
                 if len(response_text) > 1500:
                     print(f"... (truncated, total {len(response_text)} chars)")
 
+            # 记录完整响应到日志
+            self._log_response(turn + 1, response_text)
+
             code = self._extract_code(response_text)
             if code:
                 last_code = code
@@ -344,13 +474,16 @@ class AlgorithmSolver:
             if "ALL_TESTS_PASSED" in response_text and not function_calls:
                 if stress_test_passed and verified_code:
                     print("\n[程序化校验] 对拍已通过，返回验证过的代码")
+                    self._log("[程序化校验] 对拍已通过，返回验证过的代码")
                     self._contents = contents
                     self._config = config
                     self._last_verified_code = verified_code
                     self._last_code = verified_code
-                    return verified_code, True
+                    cpp_code = self._translate_to_cpp(verified_code)
+                    return verified_code, cpp_code, True
                 else:
                     print("\n[程序化校验] 模型声称通过但未检测到 STRESS TEST PASSED，要求重新验证")
+                    self._log("[程序化校验] 模型声称通过但未检测到 STRESS TEST PASSED，要求重新验证")
                     contents.append(types.Content(
                         role="user",
                         parts=[types.Part.from_text(
@@ -368,8 +501,24 @@ class AlgorithmSolver:
                     func_args = dict(fc.args) if fc.args else {}
 
                     if func_name == "stress_test":
-                        allowed_keys = {"solution_code", "brute_force_code", "generator_code"}
-                        func_args = {k: v for k, v in func_args.items() if k in allowed_keys}
+                        # 只保留 solution_code，注入预生成的暴力代码
+                        solution_code = func_args.get("solution_code", "")
+                        if self._brute_force_code and self._generator_code:
+                            func_args = {
+                                "solution_code": solution_code,
+                                "brute_force_code": self._brute_force_code,
+                                "generator_code": self._generator_code,
+                            }
+                            print("    [注入] 使用预生成的暴力算法和数据生成器")
+                        else:
+                            result = "Error: 暴力算法未生成，无法进行对拍验证"
+                            self._log_tool_call(func_name, {"solution_code": solution_code}, result)
+                            function_responses.append(types.Part.from_function_response(
+                                name=func_name,
+                                response={"result": result},
+                            ))
+                            print(f"    结果: {result}")
+                            continue
                     elif func_name == "run_python_code":
                         allowed_keys = {"code", "test_input"}
                         func_args = {k: v for k, v in func_args.items() if k in allowed_keys}
@@ -383,6 +532,9 @@ class AlgorithmSolver:
                             result = f"Error: {e}"
                     else:
                         result = f"Unknown function: {func_name}"
+
+                    # 记录工具调用到日志
+                    self._log_tool_call(func_name, func_args, result)
 
                     if func_name == "stress_test" and "STRESS TEST PASSED" in result:
                         stress_test_passed = True
@@ -409,12 +561,14 @@ class AlgorithmSolver:
                 ))
 
                 if stress_test_passed and verified_code:
-                    print("\n[程序化校验] 对拍已通过 2000 次测试，直接返回验证过的代码")
+                    print("\n[程序化校验] 对拍已通过 1000 次测试，直接返回验证过的代码")
+                    self._log("[程序化校验] 对拍已通过 1000 次测试，直接返回验证过的代码")
                     self._contents = contents
                     self._config = config
                     self._last_verified_code = verified_code
                     self._last_code = verified_code
-                    return verified_code, True
+                    cpp_code = self._translate_to_cpp(verified_code)
+                    return verified_code, cpp_code, True
             else:
                 if turn < max_attempts - 1:
                     contents.append(types.Content(
@@ -427,18 +581,46 @@ class AlgorithmSolver:
         self._contents = contents
         self._config = config
         self._last_code = last_code
-        return last_code, False
+        cpp_code = self._translate_to_cpp(last_code)
+        return last_code, cpp_code, False
 
     def continue_solving(
         self,
         feedback: str,
         max_attempts: int = 20,
         on_attempt: Callable[[int, str], None] | None = None,
-    ) -> tuple[str | None, bool]:
-        """根据用户反馈继续优化代码。"""
+    ) -> tuple[str | None, str | None, bool]:
+        """根据用户反馈继续优化代码。
+
+        Returns:
+            (python_code, cpp_code, success) 元组
+        """
         if not self._contents or not self._config:
             raise RuntimeError("没有可继续的对话，请先调用 solve()")
 
+        # 重新打开日志文件（追加模式）
+        if self._log_path and not self._log_file:
+            self._log_file = open(self._log_path, "a", encoding="utf-8")
+
+        self._log(f"\n{'='*80}")
+        self._log("继续优化 - 用户反馈")
+        self._log(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        self._log("=" * 80)
+        self._log(f"反馈内容: {feedback}")
+        self._log("=" * 80 + "\n")
+
+        try:
+            return self._continue_solving_impl(feedback, max_attempts, on_attempt)
+        finally:
+            self._close_log()
+
+    def _continue_solving_impl(
+        self,
+        feedback: str,
+        max_attempts: int,
+        on_attempt: Callable[[int, str], None] | None,
+    ) -> tuple[str | None, str | None, bool]:
+        """继续优化的实际逻辑。"""
         contents = self._contents
         config = self._config
 
@@ -479,6 +661,7 @@ class AlgorithmSolver:
                     break
                 except Exception as e:
                     print(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
+                    self._log(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
                     if retry == 29:
                         raise
                     import time
@@ -490,6 +673,7 @@ class AlgorithmSolver:
             candidate = response.candidates[0] if response.candidates else None
             if not candidate or not candidate.content:
                 print(f"[Turn {turn + 1}] 无响应内容")
+                self._log(f"[Turn {turn + 1}] 无响应内容")
                 break
 
             response_content = candidate.content
@@ -520,6 +704,9 @@ class AlgorithmSolver:
                 if len(response_text) > 1500:
                     print(f"... (truncated, total {len(response_text)} chars)")
 
+            # 记录完整响应到日志
+            self._log_response(turn + 1, response_text)
+
             code = self._extract_code(response_text)
             if code:
                 last_code = code
@@ -531,12 +718,15 @@ class AlgorithmSolver:
             if "ALL_TESTS_PASSED" in response_text and not function_calls:
                 if stress_test_passed and verified_code:
                     print("\n[程序化校验] 对拍已通过，返回验证过的代码")
+                    self._log("[程序化校验] 对拍已通过，返回验证过的代码")
                     self._contents = contents
                     self._last_verified_code = verified_code
                     self._last_code = verified_code
-                    return verified_code, True
+                    cpp_code = self._translate_to_cpp(verified_code)
+                    return verified_code, cpp_code, True
                 else:
                     print("\n[程序化校验] 模型声称通过但未检测到 STRESS TEST PASSED，要求重新验证")
+                    self._log("[程序化校验] 模型声称通过但未检测到 STRESS TEST PASSED，要求重新验证")
                     contents.append(types.Content(
                         role="user",
                         parts=[types.Part.from_text(
@@ -554,8 +744,24 @@ class AlgorithmSolver:
                     func_args = dict(fc.args) if fc.args else {}
 
                     if func_name == "stress_test":
-                        allowed_keys = {"solution_code", "brute_force_code", "generator_code"}
-                        func_args = {k: v for k, v in func_args.items() if k in allowed_keys}
+                        # 只保留 solution_code，注入预生成的暴力代码
+                        solution_code = func_args.get("solution_code", "")
+                        if self._brute_force_code and self._generator_code:
+                            func_args = {
+                                "solution_code": solution_code,
+                                "brute_force_code": self._brute_force_code,
+                                "generator_code": self._generator_code,
+                            }
+                            print("    [注入] 使用预生成的暴力算法和数据生成器")
+                        else:
+                            result = "Error: 暴力算法未生成，无法进行对拍验证"
+                            self._log_tool_call(func_name, {"solution_code": solution_code}, result)
+                            function_responses.append(types.Part.from_function_response(
+                                name=func_name,
+                                response={"result": result},
+                            ))
+                            print(f"    结果: {result}")
+                            continue
                     elif func_name == "run_python_code":
                         allowed_keys = {"code", "test_input"}
                         func_args = {k: v for k, v in func_args.items() if k in allowed_keys}
@@ -569,6 +775,9 @@ class AlgorithmSolver:
                             result = f"Error: {e}"
                     else:
                         result = f"Unknown function: {func_name}"
+
+                    # 记录工具调用到日志
+                    self._log_tool_call(func_name, func_args, result)
 
                     if func_name == "stress_test" and "STRESS TEST PASSED" in result:
                         stress_test_passed = True
@@ -595,11 +804,13 @@ class AlgorithmSolver:
                 ))
 
                 if stress_test_passed and verified_code:
-                    print("\n[程序化校验] 对拍已通过 2000 次测试，直接返回验证过的代码")
+                    print("\n[程序化校验] 对拍已通过 1000 次测试，直接返回验证过的代码")
+                    self._log("[程序化校验] 对拍已通过 1000 次测试，直接返回验证过的代码")
                     self._contents = contents
                     self._last_verified_code = verified_code
                     self._last_code = verified_code
-                    return verified_code, True
+                    cpp_code = self._translate_to_cpp(verified_code)
+                    return verified_code, cpp_code, True
             else:
                 if turn < max_attempts - 1:
                     contents.append(types.Content(
@@ -611,7 +822,8 @@ class AlgorithmSolver:
 
         self._contents = contents
         self._last_code = last_code
-        return last_code, False
+        cpp_code = self._translate_to_cpp(last_code)
+        return last_code, cpp_code, False
 
     def _extract_code(self, text: str) -> str | None:
         """Extract Python code from response text."""

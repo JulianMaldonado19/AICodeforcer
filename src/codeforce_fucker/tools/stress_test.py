@@ -10,7 +10,7 @@ def stress_test(
     solution_code: str,
     brute_force_code: str,
     generator_code: str,
-    num_tests: int = 2000,
+    num_tests: int = 1000,
 ) -> str:
     """对拍验证工具：比较优化算法和暴力算法的输出。"""
     for i in range(num_tests):

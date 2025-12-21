@@ -4,41 +4,47 @@ import sys
 
 from dotenv import load_dotenv
 
-from codeforce_fucker.agents import AlgorithmSolver, CppTranslator
+from codeforce_fucker.agents import AlgorithmSolver
 
 load_dotenv()
 
 
-def print_solution(python_code: str, cpp_code: str | None, passed: bool) -> None:
-    """打印解决方案（Python + C++）。"""
+def print_solution(python_code: str | None, cpp_code: str | None, passed: bool) -> None:
+    """打印解决方案（Python 和 C++ 两份代码）。"""
     print("\n" + "=" * 60)
 
     if passed and python_code:
         print("  对拍通过!")
         print("=" * 60)
 
+        # 输出 Python 代码
         print("\n" + "=" * 60)
-        print("  Python 代码")
+        print("  最终代码 (Python)")
         print("=" * 60)
         print(python_code)
 
+        # 输出 C++ 代码
         if cpp_code:
             print("\n" + "=" * 60)
-            print("  C++ 代码")
+            print("  最终代码 (C++)")
             print("=" * 60)
             print(cpp_code)
         else:
-            print("\n[注意] C++ 翻译失败，仅输出 Python 代码")
-
-        print("\n" + "=" * 60)
+            print("\n[注意] C++ 翻译失败，仅提供 Python 代码")
     else:
         print("  本轮求解未通过对拍")
         print("=" * 60)
         if python_code:
-            print("\n当前 Python 代码:")
+            print("\n当前代码 (Python):")
             print("-" * 40)
             print(python_code)
             print("-" * 40)
+
+            if cpp_code:
+                print("\n当前代码 (C++):")
+                print("-" * 40)
+                print(cpp_code)
+                print("-" * 40)
 
 
 def main() -> int:
@@ -79,7 +85,6 @@ def main() -> int:
 
     try:
         solver = AlgorithmSolver(api_key=api_key)
-        translator = CppTranslator(api_key=api_key)
 
         def on_attempt(attempt: int, code: str) -> None:
             print(f"\n--- 尝试 #{attempt} ---")
@@ -91,14 +96,10 @@ def main() -> int:
                 print(f"... ({len(code_lines) - 30} more lines)")
             print("-" * 40)
 
-        solution, passed = solver.solve(text, max_attempts=100, on_attempt=on_attempt)
-
-        cpp_solution: str | None = None
-        if passed and solution:
-            cpp_solution = translator.translate(solution)
+        solution, cpp_code, passed = solver.solve(text, max_attempts=100, on_attempt=on_attempt)
 
         while True:
-            print_solution(solution, cpp_solution, passed)
+            print_solution(solution, cpp_code, passed)
 
             print("\n" + "-" * 60)
             print("请输入提交结果反馈 (输入 AC/done/quit 结束):")
@@ -126,15 +127,11 @@ def main() -> int:
             print("  继续优化中...")
             print("=" * 60)
 
-            solution, passed = solver.continue_solving(
+            solution, cpp_code, passed = solver.continue_solving(
                 feedback=feedback,
                 max_attempts=50,
                 on_attempt=on_attempt,
             )
-
-            cpp_solution = None
-            if passed and solution:
-                cpp_solution = translator.translate(solution)
 
         return 0
 

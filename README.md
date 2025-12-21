@@ -8,8 +8,9 @@ Gemini-powered algorithm problem solver agent.
 
 - 自动分析算法题目并生成解法
 - 使用沙箱环境执行代码测试
-- 自动对拍验证（2000 组随机测试）
-- Python 代码自动翻译为 C++
+- 三路共识暴力生成（3 个独立 Agent 必须一致）
+- 自动对拍验证（1000 组随机测试）
+- Python 代码自动翻译为竞赛风格 C++
 - 支持交互式反馈优化
 
 ## 安装
@@ -63,7 +64,8 @@ src/codeforce_fucker/
 ├── types.py             # 类型定义
 ├── agents/
 │   ├── solver.py        # 算法求解 Agent
-│   └── translator.py    # Python 转 C++ Agent
+│   ├── brute_force.py   # 三路共识暴力生成 Agent
+│   └── cpp_translator.py # Python 转 C++ Agent
 └── tools/
     ├── executor.py      # 沙箱代码执行器
     ├── run_python.py    # 代码执行工具
@@ -76,9 +78,10 @@ src/codeforce_fucker/
 2. **算法设计** - 提出候选方案，分析复杂度
 3. **代码实现** - 编写 Python 解法
 4. **样例测试** - 运行题目给出的样例
-5. **对拍验证** - 暴力算法 vs 优化算法，2000 组随机测试
-6. **代码翻译** - Python 自动翻译为 C++
-7. **反馈优化** - 根据 OJ 反馈继续迭代
+5. **暴力生成** - 三路共识生成暴力算法（3 个 Agent 必须一致）
+6. **对拍验证** - 暴力算法 vs 优化算法，1000 组随机测试
+7. **代码翻译** - Python 自动翻译为竞赛风格 C++
+8. **反馈优化** - 根据 OJ 反馈继续迭代
 
 ## 依赖
 
