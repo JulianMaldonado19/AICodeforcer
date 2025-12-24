@@ -6,6 +6,8 @@ import re
 from google import genai
 from google.genai import types
 
+from AICodeforcer.api_logger import APILogger
+
 PREPROCESSOR_SYSTEM_PROMPT = """<role>
 You are a top-tier ICPC / CCPC competitive programming problem setter.
 Your task is to generate data generator and judge (Interactor) for interactive problems.
@@ -99,6 +101,9 @@ class InteractivePreprocessor:
         else:
             self.client = genai.Client(api_key=self.api_key)
 
+        # 完整API日志
+        self._api_logger = APILogger()
+
     def generate(
         self,
         problem_text: str,
@@ -149,21 +154,28 @@ class InteractivePreprocessor:
             parts=[types.Part.from_text(text=initial_prompt)],
         ))
 
+        # 初始化日志
+        self._api_logger.init(prefix="preprocessor", model=self.model)
+
         for attempt in range(max_attempts):
             print(f"\n[预处理] 生成评测机和数据生成器 (尝试 {attempt + 1}/{max_attempts})...")
 
             response = None
             for retry in range(10):
                 try:
+                    self._api_logger.log_request(contents, config)
                     response = self.client.models.generate_content(
                         model=self.model,
                         contents=contents,
                         config=config,
                     )
+                    self._api_logger.log_response(response)
                     break
                 except Exception as e:
+                    self._api_logger.log_response(None, error=str(e))
                     print(f"  请求失败 (重试 {retry + 1}/10): {e}")
                     if retry == 9:
+                        self._api_logger.close()
                         return None
                     import time
                     time.sleep(3)
@@ -204,6 +216,7 @@ class InteractivePreprocessor:
 
             if is_valid:
                 print("  验证通过!")
+                self._api_logger.close()
                 return generator_code, judge_code
 
             print(f"  验证发现问题: {issues[:200]}...")
@@ -222,6 +235,7 @@ class InteractivePreprocessor:
             ))
 
         print("[预处理] 生成失败，已达最大尝试次数")
+        self._api_logger.close()
         return None
 
     def _extract_code(self, text: str, code_type: str) -> str | None:

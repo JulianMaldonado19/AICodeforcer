@@ -9,6 +9,7 @@ from typing import Callable, TextIO
 from google import genai
 from google.genai import types
 
+from AICodeforcer.api_logger import APILogger
 from AICodeforcer.interactive.tools import interactive_stress_test
 from AICodeforcer.interactive.tools.interactive_stress_test import _default_num_tests as INTERACTIVE_STRESS_TEST_NUM
 from AICodeforcer.standard.agents.cpp_translator import CppTranslator
@@ -246,6 +247,9 @@ class InteractiveSolver:
         self._log_file: TextIO | None = None
         self._log_path: Path | None = None
 
+        # 完整API日志
+        self._api_logger = APILogger(self._log_dir)
+
         # C++ translator
         self._cpp_translator = CppTranslator(
             api_key=self.api_key,
@@ -260,6 +264,10 @@ class InteractiveSolver:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._log_path = self._log_dir / f"interactive_{timestamp}.log"
         self._log_file = open(self._log_path, "w", encoding="utf-8")
+
+        # 初始化完整API日志
+        self._api_logger.init(prefix=f"interactive_{timestamp}", model=self.model)
+
         self._log(f"{'='*80}")
         self._log("AICodeforcer 交互题求解日志")
         self._log(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -314,6 +322,9 @@ class InteractiveSolver:
             self._log_file.close()
             self._log_file = None
             print(f"\n[日志] 已保存到: {self._log_path}")
+
+        # 关闭完整API日志
+        self._api_logger.close()
 
     def solve(
         self,
@@ -410,13 +421,20 @@ class InteractiveSolver:
             response = None
             for retry in range(30):
                 try:
+                    # 记录请求到完整日志
+                    self._api_logger.log_request(contents, config)
+
                     response = self.client.models.generate_content(
                         model=self.model,
                         contents=contents,
                         config=config,
                     )
+
+                    # 记录响应到完整日志
+                    self._api_logger.log_response(response)
                     break
                 except Exception as e:
+                    self._api_logger.log_response(None, error=str(e))
                     print(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
                     self._log(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
                     if retry == 29:
@@ -647,13 +665,20 @@ class InteractiveSolver:
             response = None
             for retry in range(30):
                 try:
+                    # 记录请求到完整日志
+                    self._api_logger.log_request(contents, config)
+
                     response = self.client.models.generate_content(
                         model=self.model,
                         contents=contents,
                         config=config,
                     )
+
+                    # 记录响应到完整日志
+                    self._api_logger.log_response(response)
                     break
                 except Exception as e:
+                    self._api_logger.log_response(None, error=str(e))
                     print(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
                     self._log(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
                     if retry == 29:

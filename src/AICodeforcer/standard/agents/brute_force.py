@@ -8,6 +8,7 @@ import time
 from google import genai
 from google.genai import types
 
+from AICodeforcer.api_logger import APILogger
 from AICodeforcer.standard.tools.executor import execute_code
 
 BRUTE_FORCE_PROMPT = """<role>
@@ -105,6 +106,9 @@ class BruteForceGenerator:
         else:
             self.client = genai.Client(api_key=self.api_key)
 
+        # 完整API日志
+        self._api_logger = APILogger()
+
     def generate(self, problem_text: str) -> tuple[str, str] | None:
         """生成暴力算法和数据生成器。
 
@@ -140,19 +144,26 @@ class BruteForceGenerator:
             )
         ]
 
+        # 初始化日志
+        self._api_logger.init(prefix="brute_force", model=self.model)
+
         response = None
         for retry in range(30):
             try:
+                self._api_logger.log_request(contents, config)
                 response = self.client.models.generate_content(
                     model=self.model,
                     contents=contents,
                     config=config,
                 )
+                self._api_logger.log_response(response)
                 break
             except Exception as e:
+                self._api_logger.log_response(None, error=str(e))
                 print(f"[暴力生成] 请求失败 (重试 {retry + 1}/30): {e}")
                 if retry == 29:
                     print("[暴力生成] 生成失败")
+                    self._api_logger.close()
                     return None
                 import time
                 time.sleep(5)
@@ -180,16 +191,19 @@ class BruteForceGenerator:
 
         if not brute_force_code:
             print("[暴力生成] 未能提取暴力算法代码")
+            self._api_logger.close()
             return None
 
         if not generator_code:
             print("[暴力生成] 未能提取数据生成器代码")
+            self._api_logger.close()
             return None
 
         print("[暴力生成] 成功生成暴力算法和数据生成器")
         print(f"  - 暴力算法: {len(brute_force_code)} 字符")
         print(f"  - 数据生成器: {len(generator_code)} 字符")
 
+        self._api_logger.close()
         return brute_force_code, generator_code
 
     def _extract_code(self, text: str, marker: str) -> str | None:
@@ -273,26 +287,36 @@ class BruteForceGenerator:
             )
         ]
 
+        # 为每个agent创建独立的日志
+        agent_logger = APILogger()
+        agent_logger.init(prefix=f"brute_force_agent{agent_id}", model=self.model)
+
         response = None
         for retry in range(30):
             try:
+                agent_logger.log_request(contents, config)
                 response = client.models.generate_content(
                     model=self.model,
                     contents=contents,
                     config=config,
                 )
+                agent_logger.log_response(response)
                 break
             except Exception as e:
+                agent_logger.log_response(None, error=str(e))
                 print(f"  [Agent {agent_id}] 请求失败 (重试 {retry + 1}/30): {e}")
                 if retry == 29:
+                    agent_logger.close()
                     return None
                 time.sleep(5)
 
         if not response:
+            agent_logger.close()
             return None
 
         candidate = response.candidates[0] if response.candidates else None
         if not candidate or not candidate.content:
+            agent_logger.close()
             return None
 
         response_text = ""
@@ -301,14 +325,17 @@ class BruteForceGenerator:
                 response_text += part.text
 
         if not response_text.strip():
+            agent_logger.close()
             return None
 
         brute_force_code = self._extract_code(response_text, "BRUTE_FORCE")
         generator_code = self._extract_code(response_text, "GENERATOR")
 
         if not brute_force_code or not generator_code:
+            agent_logger.close()
             return None
 
+        agent_logger.close()
         return brute_force_code, generator_code, agent_id
 
     def _validate_consensus(
