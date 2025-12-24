@@ -20,7 +20,13 @@ def stress_test(
     num_tests: int = _default_num_tests,
 ) -> str:
     """对拍验证工具：比较优化算法和暴力算法的输出。"""
+    progress_parts = []
+    progress_interval = max(1, num_tests // 10)
     for i in range(num_tests):
+        # 每 1/10 输出进度
+        if i > 0 and i % progress_interval == 0:
+            progress_parts.append(f"[{i}/{num_tests}] ✓")
+            print(f"[{i}/{num_tests}] ✓", end="", flush=True)
         gen_result = execute_code(
             code=generator_code,
             stdin="",
@@ -90,6 +96,9 @@ Solution Output:
 
 请分析差异并修正你的优化算法。"""
 
+    # 结束后换行
+    if progress_parts:
+        print()
     return f"""=== STRESS TEST PASSED ===
 All {num_tests} tests passed!
 Your solution matches the brute force on all random inputs."""

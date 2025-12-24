@@ -78,7 +78,7 @@ def _create_resource_limiter(timeout_seconds: float, memory_mb: int):
 def execute_code(
     code: str,
     stdin: str,
-    timeout_seconds: float = 2.0,
+    timeout_seconds: float = 3.0,
     memory_mb: int = 256,
 ) -> ExecutionResult:
     """Execute Python code in a sandboxed environment with output caps."""

@@ -1,10 +1,19 @@
 """Interactive stress test tool for validating interactive solutions."""
 
+import os
+
+from dotenv import load_dotenv
+
 from AICodeforcer.interactive.tools.interaction_runner import run_interaction
 from AICodeforcer.standard.tools.executor import execute_code
 
+load_dotenv()
+
 # 日志截断配置
 _LOG_MAX_CHARS = 3500
+
+# 默认测试次数
+_default_num_tests: int = int(os.getenv("INTERACTIVE_STRESS_TEST_NUM", "100"))
 
 
 def _truncate_interaction_log(log: str, max_chars: int = _LOG_MAX_CHARS) -> str:
@@ -104,7 +113,7 @@ def interactive_stress_test(
     solution_code: str,
     generator_code: str,
     judge_code: str,
-    num_tests: int = 100,
+    num_tests: int = _default_num_tests,
 ) -> str:
     """Run interactive stress test.
 
@@ -117,7 +126,13 @@ def interactive_stress_test(
     Returns:
         Result string: "INTERACTIVE STRESS TEST PASSED" or failure details with full log
     """
+    progress_parts = []
+    progress_interval = max(1, num_tests // 10)
     for i in range(num_tests):
+        # 每 1/10 输出进度
+        if i > 0 and i % progress_interval == 0:
+            progress_parts.append(f"[{i}/{num_tests}] ✓")
+            print(f"[{i}/{num_tests}] ✓", end="", flush=True)
         # Generate test data
         gen_result = execute_code(
             code=generator_code,
@@ -167,6 +182,9 @@ Interaction Log:
 
 请分析交互日志并修正你的代码。"""
 
+    # 结束后换行
+    if progress_parts:
+        print()
     return f"""=== INTERACTIVE STRESS TEST PASSED ===
 All {num_tests} tests passed!
 Your interactive solution works correctly on all random inputs."""
