@@ -5,11 +5,16 @@ import os
 import re
 import time
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
 from AICodeforcer.api_logger import APILogger
 from AICodeforcer.standard.tools.executor import execute_code
+
+load_dotenv()
+_max_output_tokens: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "65536"))
+_consensus_max_retries: int = int(os.getenv("BRUTE_FORCE_CONSENSUS_RETRIES", "3"))
 
 BRUTE_FORCE_PROMPT = """<role>
 You are an assistant specialized in writing brute force algorithms. Your sole objective is to write absolutely correct brute force solutions for algorithm problems.
@@ -125,6 +130,7 @@ class BruteForceGenerator:
         config = types.GenerateContentConfig(
             system_instruction=BRUTE_FORCE_PROMPT,
             temperature=1.0,
+            max_output_tokens=_max_output_tokens,
             thinking_config=types.ThinkingConfig(thinking_level="high"),
         )
 
@@ -268,6 +274,7 @@ class BruteForceGenerator:
         config = types.GenerateContentConfig(
             system_instruction=BRUTE_FORCE_PROMPT,
             temperature=1.0,
+            max_output_tokens=_max_output_tokens,
             thinking_config=types.ThinkingConfig(thinking_level="high"),
         )
 
@@ -410,44 +417,51 @@ class BruteForceGenerator:
         Returns:
             (brute_force_code, generator_code) 或 None
         """
-        print("\n" + "=" * 60)
-        print(f"  启动 {num_agents} 个 Agent 并行生成暴力解法")
-        print("=" * 60)
+        for retry in range(_consensus_max_retries):
+            if retry > 0:
+                print(f"\n[重试] 第 {retry + 1}/{_consensus_max_retries} 次尝试生成暴力解法...")
 
-        # 并行生成
-        results: list[tuple[str, str, int] | None] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_agents) as executor:
-            futures = {
-                executor.submit(self._generate_single, problem_text, i): i
-                for i in range(num_agents)
-            }
+            print("\n" + "=" * 60)
+            print(f"  启动 {num_agents} 个 Agent 并行生成暴力解法")
+            print("=" * 60)
 
-            for future in concurrent.futures.as_completed(futures):
-                agent_id = futures[future]
-                try:
-                    result = future.result()
-                    if result:
-                        brute_code, gen_code, aid = result
-                        print(f"  Agent {aid}: 生成成功 ({len(brute_code)} 字符)")
-                        results.append(result)
-                    else:
-                        print(f"  Agent {agent_id}: 生成失败")
-                except Exception as e:
-                    print(f"  Agent {agent_id}: 异常 - {e}")
+            # 并行生成
+            results: list[tuple[str, str, int] | None] = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_agents) as executor:
+                futures = {
+                    executor.submit(self._generate_single, problem_text, i): i
+                    for i in range(num_agents)
+                }
 
-        # 检查是否所有 agent 都成功
-        if len(results) < num_agents:
-            print(f"\n[错误] 只有 {len(results)}/{num_agents} 个 Agent 成功，需要全部成功")
-            return None
+                for future in concurrent.futures.as_completed(futures):
+                    agent_id = futures[future]
+                    try:
+                        result = future.result()
+                        if result:
+                            brute_code, gen_code, aid = result
+                            print(f"  Agent {aid}: 生成成功 ({len(brute_code)} 字符)")
+                            results.append(result)
+                        else:
+                            print(f"  Agent {agent_id}: 生成失败")
+                    except Exception as e:
+                        print(f"  Agent {agent_id}: 异常 - {e}")
 
-        # 提取暴力代码和生成器
-        brute_codes = [r[0] for r in results]
-        generator_code = results[0][1]  # 使用第一个 agent 的生成器
+            # 检查是否所有 agent 都成功
+            if len(results) < num_agents:
+                print(f"\n[错误] 只有 {len(results)}/{num_agents} 个 Agent 成功，需要全部成功")
+                continue
 
-        # 一致性验证
-        if not self._validate_consensus(brute_codes, generator_code, validation_rounds):
-            print("\n[错误] 暴力解法一致性验证失败，3 个解法输出不一致")
-            return None
+            # 提取暴力代码和生成器
+            brute_codes = [r[0] for r in results]
+            generator_code = results[0][1]  # 使用第一个 agent 的生成器
 
-        print("\n[成功] 暴力解法验证通过，使用 Agent 0 的代码")
-        return brute_codes[0], generator_code
+            # 一致性验证
+            if not self._validate_consensus(brute_codes, generator_code, validation_rounds):
+                print("\n[错误] 暴力解法一致性验证失败，3 个解法输出不一致")
+                continue
+
+            print("\n[成功] 暴力解法验证通过，使用 Agent 0 的代码")
+            return brute_codes[0], generator_code
+
+        print(f"\n[错误] 已达最大重试次数 ({_consensus_max_retries})，暴力解法生成失败")
+        return None

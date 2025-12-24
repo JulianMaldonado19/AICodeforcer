@@ -2,8 +2,12 @@
 
 import os
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+
+load_dotenv()
+_max_output_tokens: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "65536"))
 
 VALIDATOR_SYSTEM_PROMPT = """<role>
 You are a code review expert specialized in reviewing judges and data generators for interactive problems.
@@ -88,6 +92,7 @@ class JudgeValidator:
         config = types.GenerateContentConfig(
             system_instruction=VALIDATOR_SYSTEM_PROMPT,
             temperature=0.5,  # Lower temperature for more consistent validation
+            max_output_tokens=_max_output_tokens,
             thinking_config=types.ThinkingConfig(thinking_level="medium"),
         )
 

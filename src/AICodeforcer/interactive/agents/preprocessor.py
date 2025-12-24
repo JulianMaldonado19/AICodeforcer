@@ -3,10 +3,14 @@
 import os
 import re
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
 from AICodeforcer.api_logger import APILogger
+
+load_dotenv()
+_max_output_tokens: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "65536"))
 
 PREPROCESSOR_SYSTEM_PROMPT = """<role>
 You are a top-tier ICPC / CCPC competitive programming problem setter.
@@ -129,6 +133,7 @@ class InteractivePreprocessor:
         config = types.GenerateContentConfig(
             system_instruction=PREPROCESSOR_SYSTEM_PROMPT,
             temperature=1.0,
+            max_output_tokens=_max_output_tokens,
             thinking_config=types.ThinkingConfig(thinking_level="high"),
         )
 

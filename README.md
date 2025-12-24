@@ -6,12 +6,22 @@ Gemini-powered algorithm problem solver agent.
 
 ## 功能特性
 
-- 自动分析算法题目并生成解法
-- 使用沙箱环境执行代码测试
-- 三路共识暴力生成（3 个独立 Agent 必须一致）
-- 自动对拍验证（1000 组随机测试）
-- Python 代码自动翻译为竞赛风格 C++
-- 支持交互式反馈优化
+- **标准算法题模式**
+  - 自动分析算法题目并生成解法
+  - 三路共识暴力生成（3 个独立 Agent 必须一致）
+  - 自动对拍验证（默认 1000 组随机测试）
+  - 失败自动重试机制
+
+- **交互题模式**
+  - 自动生成评测机（Judge）和数据生成器
+  - AI 验证评测机正确性
+  - 交互式对拍验证（默认 100 组测试）
+
+- **通用功能**
+  - 使用沙箱环境执行代码测试
+  - Python 代码自动翻译为竞赛风格 C++
+  - 支持交互式反馈优化（TLE/WA/MLE/RE）
+  - 完整 API 请求/响应日志记录
 
 ## 安装
 
@@ -29,12 +39,23 @@ pip install -e .
 
 ## 配置
 
-创建 `.env` 文件并配置 Gemini API：
+创建 `.env` 文件并配置：
 
 ```bash
+# Gemini API 配置（必需）
 GEMINI_API_KEY=your_api_key_here
-GEMINI_MODEL=gemini-2.5-flash  # 可选，默认 gemini-2.5-flash
-GEMINI_BASE_URL=https://your-proxy.com  # 可选，自定义 API 地址
+
+# 可选配置
+GEMINI_MODEL=gemini-2.5-flash          # 模型名称
+GEMINI_BASE_URL=https://your-proxy.com # 自定义 API 地址
+GEMINI_MAX_OUTPUT_TOKENS=65536         # 最大输出 token 数
+
+# 对拍测试次数
+STRESS_TEST_NUM=1000                   # 标准模式对拍次数
+INTERACTIVE_STRESS_TEST_NUM=100        # 交互模式对拍次数
+
+# 重试配置
+BRUTE_FORCE_CONSENSUS_RETRIES=3        # 暴力生成失败重试次数
 ```
 
 ## 使用方法
@@ -47,7 +68,11 @@ aicodeforcer
 python -m AICodeforcer.main
 ```
 
-运行后：
+运行后选择模式：
+1. **标准算法题** - 对拍验证模式
+2. **交互题** - 交互式评测模式
+
+然后：
 1. 粘贴完整的题目内容
 2. 输入 `END` 结束输入
 3. 等待 AI 分析、编写代码、对拍验证
@@ -59,17 +84,38 @@ python -m AICodeforcer.main
 
 ```
 src/AICodeforcer/
-├── __init__.py
-├── main.py              # CLI 入口
-├── types.py             # 类型定义
-├── agents/
-│   ├── solver.py        # 算法求解 Agent
-│   ├── brute_force.py   # 三路共识暴力生成 Agent
-│   └── cpp_translator.py # Python 转 C++ Agent
-└── tools/
-    ├── executor.py      # 沙箱代码执行器
-    ├── run_python.py    # 代码执行工具
-    └── stress_test.py   # 对拍验证工具
+├── main.py                # CLI 入口
+├── types.py               # 类型定义
+├── api_logger.py          # API 日志记录器
+├── standard/              # 标准算法题模块
+│   ├── agents/
+│   │   ├── solver.py      # 算法求解 Agent
+│   │   ├── brute_force.py # 三路共识暴力生成
+│   │   └── cpp_translator.py
+│   └── tools/
+│       ├── executor.py    # 沙箱代码执行器
+│       ├── run_python.py  # 代码执行工具
+│       └── stress_test.py # 对拍验证工具
+└── interactive/           # 交互题模块
+    ├── agents/
+    │   ├── solver.py      # 交互题求解 Agent
+    │   ├── preprocessor.py # 评测机生成器
+    │   └── judge_validator.py
+    └── tools/
+        ├── interaction_runner.py    # IPC 通信管理
+        └── interactive_stress_test.py
+```
+
+## 日志
+
+每次运行会在 `logs/` 下创建时间戳文件夹：
+
+```
+logs/20251224_165001/
+├── solve.log              # 普通日志
+├── solve_full.log         # 完整 API 日志
+├── brute_force_full.log   # 暴力生成日志
+└── brute_force_agent*_full.log
 ```
 
 ## 工作流程

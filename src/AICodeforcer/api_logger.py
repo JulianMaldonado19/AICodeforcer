@@ -89,11 +89,33 @@ def _serialize_response(response) -> dict[str, Any]:
 class APILogger:
     """完整API日志记录器。"""
 
+    # 类变量：当前会话目录（所有logger共享）
+    _session_dir: Path | None = None
+
     def __init__(self, log_dir: str | Path = "logs"):
         self.log_dir = Path(log_dir)
         self._full_log_file: TextIO | None = None
         self._full_log_path: Path | None = None
         self._request_count = 0
+
+    @classmethod
+    def create_session(cls, log_dir: str | Path = "logs") -> Path:
+        """创建新的会话目录（每次运行调用一次）。
+
+        Returns:
+            会话目录路径
+        """
+        log_dir = Path(log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        cls._session_dir = log_dir / timestamp
+        cls._session_dir.mkdir(parents=True, exist_ok=True)
+        return cls._session_dir
+
+    @classmethod
+    def get_session_dir(cls) -> Path | None:
+        """获取当前会话目录。"""
+        return cls._session_dir
 
     def init(self, prefix: str = "solve", model: str = "") -> Path:
         """初始化日志文件。
@@ -105,9 +127,11 @@ class APILogger:
         Returns:
             完整日志文件路径
         """
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self._full_log_path = self.log_dir / f"{prefix}_{timestamp}_full.log"
+        # 如果没有会话目录，创建一个
+        if APILogger._session_dir is None:
+            APILogger.create_session(self.log_dir)
+
+        self._full_log_path = APILogger._session_dir / f"{prefix}_full.log"
         self._full_log_file = open(self._full_log_path, "w", encoding="utf-8")
         self._request_count = 0
 

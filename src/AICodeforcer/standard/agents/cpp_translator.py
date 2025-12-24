@@ -4,8 +4,12 @@ import os
 import re
 import time
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+
+load_dotenv()
+_max_output_tokens: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "65536"))
 
 CPP_TRANSLATOR_PROMPT = """<role>
 You are a senior C++ Competitive Programming contestant. Your task is to translate the input Python algorithm code into a specific "competitive programming personal template style" C++ code.
@@ -137,6 +141,7 @@ class CppTranslator:
         config = types.GenerateContentConfig(
             system_instruction=CPP_TRANSLATOR_PROMPT,
             temperature=1.0,
+            max_output_tokens=_max_output_tokens,
             thinking_config=types.ThinkingConfig(thinking_level="high"),
         )
 

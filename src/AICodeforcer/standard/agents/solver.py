@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, TextIO
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
@@ -14,6 +15,9 @@ from AICodeforcer.standard.agents.brute_force import BruteForceGenerator
 from AICodeforcer.standard.agents.cpp_translator import CppTranslator
 from AICodeforcer.standard.tools import run_python_code, stress_test
 from AICodeforcer.standard.tools.stress_test import _default_num_tests as STRESS_TEST_NUM
+
+load_dotenv()
+_max_output_tokens: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "65536"))
 
 SYSTEM_PROMPT = """<role>
 You are a top-tier ICPC / CCPC competitive programming algorithm assistant.
@@ -264,13 +268,15 @@ class AlgorithmSolver:
 
     def _init_log(self, problem_text: str) -> None:
         """初始化日志文件。"""
-        self._log_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self._log_path = self._log_dir / f"solve_{timestamp}.log"
+        # 创建会话目录（所有日志放在同一个时间戳文件夹里）
+        from AICodeforcer.api_logger import APILogger
+        session_dir = APILogger.create_session(self._log_dir)
+
+        self._log_path = session_dir / "solve.log"
         self._log_file = open(self._log_path, "w", encoding="utf-8")
 
         # 初始化完整API日志
-        self._api_logger.init(prefix=f"solve_{timestamp}", model=self.model)
+        self._api_logger.init(prefix="solve", model=self.model)
 
         self._log(f"{'='*80}")
         self._log(f"AICodeforcer 求解日志")
@@ -403,6 +409,7 @@ class AlgorithmSolver:
             tools=TOOL_DECLARATIONS,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             temperature=1.0,
+            max_output_tokens=_max_output_tokens,
             thinking_config=types.ThinkingConfig(thinking_level="high"),
         )
 
