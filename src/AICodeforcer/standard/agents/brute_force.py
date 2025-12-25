@@ -15,6 +15,7 @@ from AICodeforcer.standard.tools.executor import execute_code
 load_dotenv()
 _max_output_tokens: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "65536"))
 _consensus_max_retries: int = int(os.getenv("BRUTE_FORCE_CONSENSUS_RETRIES", "3"))
+_api_max_retries: int = int(os.getenv("API_REQUEST_MAX_RETRIES", "30"))
 
 BRUTE_FORCE_PROMPT = """<role>
 You are an assistant specialized in writing brute force algorithms. Your sole objective is to write absolutely correct brute force solutions for algorithm problems.
@@ -154,7 +155,7 @@ class BruteForceGenerator:
         self._api_logger.init(prefix="brute_force", model=self.model)
 
         response = None
-        for retry in range(30):
+        for retry in range(_api_max_retries):
             try:
                 self._api_logger.log_request(contents, config)
                 response = self.client.models.generate_content(
@@ -166,8 +167,8 @@ class BruteForceGenerator:
                 break
             except Exception as e:
                 self._api_logger.log_response(None, error=str(e))
-                print(f"[暴力生成] 请求失败 (重试 {retry + 1}/30): {e}")
-                if retry == 29:
+                print(f"[暴力生成] 请求失败 (重试 {retry + 1}/{_api_max_retries}): {e}")
+                if retry == _api_max_retries - 1:
                     print("[暴力生成] 生成失败")
                     self._api_logger.close()
                     return None
@@ -299,7 +300,7 @@ class BruteForceGenerator:
         agent_logger.init(prefix=f"brute_force_agent{agent_id}", model=self.model)
 
         response = None
-        for retry in range(30):
+        for retry in range(_api_max_retries):
             try:
                 agent_logger.log_request(contents, config)
                 response = client.models.generate_content(
@@ -311,8 +312,8 @@ class BruteForceGenerator:
                 break
             except Exception as e:
                 agent_logger.log_response(None, error=str(e))
-                print(f"  [Agent {agent_id}] 请求失败 (重试 {retry + 1}/30): {e}")
-                if retry == 29:
+                print(f"  [Agent {agent_id}] 请求失败 (重试 {retry + 1}/{_api_max_retries}): {e}")
+                if retry == _api_max_retries - 1:
                     agent_logger.close()
                     return None
                 time.sleep(5)

@@ -17,6 +17,7 @@ from AICodeforcer.standard.agents.cpp_translator import CppTranslator
 
 load_dotenv()
 _max_output_tokens: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "65536"))
+_api_max_retries: int = int(os.getenv("API_REQUEST_MAX_RETRIES", "30"))
 
 SYSTEM_PROMPT = """<role>
 You are a top-tier ICPC / CCPC competitive programming algorithm assistant specialized in solving interactive problems.
@@ -426,7 +427,7 @@ class InteractiveSolver:
 
         for turn in range(max_attempts):
             response = None
-            for retry in range(30):
+            for retry in range(_api_max_retries):
                 try:
                     # 记录请求到完整日志
                     self._api_logger.log_request(contents, config)
@@ -442,9 +443,9 @@ class InteractiveSolver:
                     break
                 except Exception as e:
                     self._api_logger.log_response(None, error=str(e))
-                    print(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
-                    self._log(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
-                    if retry == 29:
+                    print(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/{_api_max_retries}): {e}")
+                    self._log(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/{_api_max_retries}): {e}")
+                    if retry == _api_max_retries - 1:
                         raise
                     import time
                     time.sleep(5)
@@ -670,7 +671,7 @@ class InteractiveSolver:
 
         for turn in range(max_attempts):
             response = None
-            for retry in range(30):
+            for retry in range(_api_max_retries):
                 try:
                     # 记录请求到完整日志
                     self._api_logger.log_request(contents, config)
@@ -686,9 +687,9 @@ class InteractiveSolver:
                     break
                 except Exception as e:
                     self._api_logger.log_response(None, error=str(e))
-                    print(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
-                    self._log(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/30): {e}")
-                    if retry == 29:
+                    print(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/{_api_max_retries}): {e}")
+                    self._log(f"[Turn {turn + 1}] 请求失败 (重试 {retry + 1}/{_api_max_retries}): {e}")
+                    if retry == _api_max_retries - 1:
                         raise
                     import time
                     time.sleep(5)

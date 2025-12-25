@@ -60,10 +60,11 @@ def main() -> int:
     print("请选择模式:")
     print("  1. 标准算法题 (对拍验证)")
     print("  2. 交互题")
+    print("  3. 通讯题")
     print()
 
     try:
-        choice = input("选择 (1/2): ").strip()
+        choice = input("选择 (1/2/3): ").strip()
     except EOFError:
         return 0
 
@@ -71,6 +72,8 @@ def main() -> int:
         return run_standard_solver(api_key)
     elif choice == "2":
         return run_interactive_solver(api_key)
+    elif choice == "3":
+        return run_communication_solver(api_key)
     else:
         print("无效选择")
         return 1
@@ -275,6 +278,81 @@ def run_interactive_solver(api_key: str) -> int:
                 max_attempts=30,
                 on_attempt=on_attempt,
             )
+
+        return 0
+
+    except KeyboardInterrupt:
+        print("\n\n已取消")
+        return 130
+
+    except Exception as e:
+        print(f"\n错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+def run_communication_solver(api_key: str) -> int:
+    """运行通讯题求解器。"""
+    from AICodeforcer.communication.agents.solver import CommunicationSolver
+
+    print()
+    print("=" * 60)
+    print("  通讯题模式")
+    print("=" * 60)
+    print()
+    print("请粘贴完整的通讯题题目 (输入 END 结束):")
+    print("-" * 60)
+
+    lines = []
+    while True:
+        try:
+            line = input()
+            if line.strip() == "END":
+                break
+            lines.append(line)
+        except EOFError:
+            break
+
+    text = "\n".join(lines)
+
+    if not text.strip():
+        print("错误: 题目不能为空")
+        return 1
+
+    print("-" * 60)
+    print("开始分析通讯题...")
+    print("=" * 60)
+
+    try:
+        solver = CommunicationSolver(api_key=api_key)
+
+        def on_attempt(attempt: int, code: str) -> None:
+            print(f"\n--- 尝试 #{attempt} ---")
+            code_lines = code.split("\n")
+            for line in code_lines[:20]:
+                print(line)
+            if len(code_lines) > 20:
+                print(f"... ({len(code_lines) - 20} more lines)")
+
+        solution, cpp_code, passed = solver.solve(text, max_attempts=50, on_attempt=on_attempt)
+
+        print("\n" + "=" * 60)
+        if passed and solution:
+            print("  对拍通过!")
+            print("=" * 60)
+            print("\n最终代码 (Python):")
+            print(solution)
+            if cpp_code:
+                print("\n" + "=" * 60)
+                print("最终代码 (C++):")
+                print(cpp_code)
+        else:
+            print("  本轮求解未通过对拍")
+            print("=" * 60)
+            if solution:
+                print("\n当前代码:")
+                print(solution)
 
         return 0
 
