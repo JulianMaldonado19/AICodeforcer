@@ -61,10 +61,11 @@ def main() -> int:
     print("  1. 标准算法题 (对拍验证)")
     print("  2. 交互题")
     print("  3. 通讯题")
+    print("  4. Heavy模式 (多Agent探索)")
     print()
 
     try:
-        choice = input("选择 (1/2/3): ").strip()
+        choice = input("选择 (1/2/3/4): ").strip()
     except EOFError:
         return 0
 
@@ -74,6 +75,8 @@ def main() -> int:
         return run_interactive_solver(api_key)
     elif choice == "3":
         return run_communication_solver(api_key)
+    elif choice == "4":
+        return run_heavy_solver(api_key)
     else:
         print("无效选择")
         return 1
@@ -353,6 +356,132 @@ def run_communication_solver(api_key: str) -> int:
             if solution:
                 print("\n当前代码:")
                 print(solution)
+
+        return 0
+
+    except KeyboardInterrupt:
+        print("\n\n已取消")
+        return 130
+
+    except Exception as e:
+        print(f"\n错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+def run_heavy_solver(api_key: str) -> int:
+    """运行Heavy模式求解器（多Agent探索）。"""
+    from AICodeforcer.standard_heavy import HeavySolver
+
+    print()
+    print("=" * 60)
+    print("  Heavy模式 - 多Agent探索")
+    print("=" * 60)
+    print()
+
+    # 获取Agent数量
+    try:
+        num_agents_str = input("Agent数量 (默认3): ").strip()
+        num_agents = int(num_agents_str) if num_agents_str else 3
+    except (EOFError, ValueError):
+        num_agents = 3
+
+    print(f"\n将启动 {num_agents} 个Agent串行探索不同解法")
+    print()
+    print("请粘贴完整的题目 (输入 END 结束):")
+    print("-" * 60)
+
+    lines = []
+    while True:
+        try:
+            line = input()
+            if line.strip() == "END":
+                break
+            lines.append(line)
+        except EOFError:
+            break
+
+    text = "\n".join(lines)
+
+    if not text.strip():
+        print("错误: 题目不能为空")
+        return 1
+
+    print("-" * 60)
+    print("开始Heavy模式求解...")
+    print("=" * 60)
+
+    try:
+        solver = HeavySolver(api_key=api_key, num_agents=num_agents)
+
+        def on_attempt(attempt: int, code: str) -> None:
+            print(f"\n--- 尝试 #{attempt} ---")
+            code_lines = code.split("\n")
+            for line in code_lines[:20]:
+                print(line)
+            if len(code_lines) > 20:
+                print(f"... ({len(code_lines) - 20} more lines)")
+
+        def on_success(result) -> None:
+            print("\n" + "=" * 60)
+            print(f"  Agent {result.agent_id} 成功!")
+            print("=" * 60)
+            if result.python_code:
+                print("\nPython代码:")
+                print(result.python_code)
+            if result.cpp_code:
+                print("\nC++代码:")
+                print(result.cpp_code)
+
+        results, solvers = solver.solve(
+            problem_text=text,
+            max_attempts=100,
+            on_attempt=on_attempt,
+            on_success=on_success,
+        )
+
+        # 反馈循环
+        while True:
+            # 汇总结果
+            print("\n" + "=" * 60)
+            print("  Heavy模式结果汇总")
+            print("=" * 60)
+            successful = [r for r in results if r.success]
+            print(f"成功: {len(successful)}/{len(results)} 个Agent")
+
+            for r in results:
+                status = "✓ 成功" if r.success else "✗ 失败"
+                print(f"  Agent {r.agent_id}: {status}")
+
+            print("\n" + "-" * 60)
+            print("请输入提交结果反馈 (输入 AC/done/quit 结束):")
+            print("-" * 60)
+
+            try:
+                feedback = input("> ").strip()
+            except EOFError:
+                break
+
+            if not feedback:
+                continue
+
+            if feedback.lower() in ("ac", "done", "quit", "exit", "q"):
+                print("\n" + "=" * 60)
+                print("  恭喜 AC!" if feedback.lower() == "ac" else "  已结束")
+                print("=" * 60)
+                break
+
+            print(f"\n[Heavy] 收到反馈: {feedback}")
+            print("[Heavy] 所有Agent并行处理反馈中...")
+
+            results = solver.continue_solving(
+                feedback=feedback,
+                solvers=solvers,
+                max_attempts=50,
+                on_attempt=on_attempt,
+                on_success=on_success,
+            )
 
         return 0
 

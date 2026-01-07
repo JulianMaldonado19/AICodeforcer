@@ -11,10 +11,10 @@ Gemini-powered algorithm problem solver agent.
 │                              AICodeforcer                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐                  │
-│  │   Standard  │    │ Interactive │    │  Communication  │                  │
-│  │    Mode     │    │    Mode     │    │      Mode       │                  │
-│  └──────┬──────┘    └──────┬──────┘    └────────┬────────┘                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌───────────────┐  ┌─────────────┐      │
+│  │   Standard  │  │ Interactive │  │ Communication │  │    Heavy    │      │
+│  │    Mode     │  │    Mode     │  │     Mode      │  │    Mode     │      │
+│  └──────┬──────┘  └──────┬──────┘  └───────┬───────┘  └──────┬──────┘      │
 │         │                  │                    │                            │
 │         ▼                  ▼                    ▼                            │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐                  │
@@ -74,6 +74,13 @@ Gemini-powered algorithm problem solver agent.
   - 自动生成中间件（Middleware）和验证器
   - 两阶段串行执行对拍验证（默认 100 组测试）
 
+- **Heavy模式（多Agent探索）**
+  - 多个Agent并行探索不同解法
+  - 流水线并行：Agent N 首次 stress_test 时触发 Agent N+1
+  - LLM思路去重检测，防止重复算法
+  - 自动禁止已探索的思路，强制差异化
+  - 支持配置重写上限（APPROACH_REWRITE_LIMIT）
+
 - **通用功能**
   - 使用沙箱环境执行代码测试
   - Python 代码自动翻译为竞赛风格 C++
@@ -117,6 +124,9 @@ COMMUNICATION_STRESS_TEST_NUM=100      # 通讯题模式对拍次数
 
 # 重试配置
 BRUTE_FORCE_CONSENSUS_RETRIES=3        # 三路共识失败重试次数
+
+# Heavy模式配置
+APPROACH_REWRITE_LIMIT=2               # 思路重写上限（去重检测）
 ```
 
 ### 配置项说明
@@ -132,6 +142,7 @@ BRUTE_FORCE_CONSENSUS_RETRIES=3        # 三路共识失败重试次数
 | `INTERACTIVE_STRESS_TEST_NUM` | `100` | 交互模式对拍测试次数 |
 | `COMMUNICATION_STRESS_TEST_NUM` | `100` | 通讯题模式对拍测试次数 |
 | `BRUTE_FORCE_CONSENSUS_RETRIES` | `3` | 三路共识失败重试次数 |
+| `APPROACH_REWRITE_LIMIT` | `2` | Heavy模式思路重写上限 |
 
 ## 使用方法
 
@@ -147,6 +158,7 @@ python -m AICodeforcer.main
 1. **标准算法题** - 对拍验证模式
 2. **交互题** - 交互式评测模式
 3. **通讯题** - Alice/Bob 两阶段模式
+4. **Heavy模式** - 多Agent探索不同解法
 
 然后：
 1. 粘贴完整的题目内容
@@ -172,6 +184,11 @@ src/AICodeforcer/
 │       ├── executor.py    # 沙箱代码执行器
 │       ├── run_python.py  # 代码执行工具
 │       └── stress_test.py # 对拍验证工具
+├── standard_heavy/        # Heavy模式模块
+│   └── agents/
+│       ├── solver.py      # Heavy求解Agent
+│       ├── heavy_solver.py # 多Agent协调器
+│       └── approach_checker.py # 思路去重检测
 └── interactive/           # 交互题模块
     ├── agents/
     │   ├── solver.py      # 交互题求解 Agent

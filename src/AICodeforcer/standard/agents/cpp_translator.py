@@ -21,6 +21,7 @@ You are a senior C++ Competitive Programming contestant. Your task is to transla
     <description>The code must start with the following template exactly (do not modify):</description>
     <template language="cpp">
 #include &lt;bits/stdc++.h&gt;
+using namespace std;
 #define ranges std::ranges
 #define views std::views
 using u32 = unsigned;
@@ -28,9 +29,9 @@ using i64 = long long;
 using u64 = unsigned long long;
 using u128 = unsigned __int128;
 using i128 = __int128;
-using a2 = std::array&lt;int, 2&gt;;
-using a3 = std::array&lt;int, 3&gt;;
-using a4 = std::array&lt;int, 4&gt;;
+using a2 = array&lt;int, 2&gt;;
+using a3 = array&lt;int, 3&gt;;
+using a4 = array&lt;int, 4&gt;;
 constexpr int N = 2e5 + 5;
 constexpr int MAXN = 2e5 + 5;
 constexpr int inf = 1e9;
@@ -39,13 +40,11 @@ constexpr i64 mod = 998244353;
   </guideline>
 
   <guideline name="Namespace Rule" priority="critical">
-    <forbidden>using namespace std;</forbidden>
-    <rule>All standard library types and functions must use std:: prefix</rule>
-    <exception>ranges:: and views:: are allowed (defined as macros in template)</exception>
+    <rule>Must use `using namespace std;` after the header template</rule>
+    <rule>Do NOT use std:: prefix for standard library types and functions</rule>
     <examples>
-      <correct>std::vector, std::string, std::cin, std::cout, std::sort, std::map</correct>
-      <correct>ranges::sort(v), views::iota(0, n)</correct>
-      <wrong>vector, string, cin, cout, sort, map</wrong>
+      <correct>vector, string, cin, cout, sort, map, set, pair</correct>
+      <wrong>std::vector, std::string, std::cin, std::cout</wrong>
     </examples>
   </guideline>
 
@@ -72,25 +71,25 @@ constexpr i64 mod = 998244353;
 
   <guideline name="Input Logic" priority="critical">
     <forbidden-patterns>
-      <pattern>if (!(std::cin &gt;&gt; ...))</pattern>
-      <pattern>if (std::cin.fail())</pattern>
+      <pattern>if (!(cin &gt;&gt; ...))</pattern>
+      <pattern>if (cin.fail())</pattern>
       <pattern>Any form of input checking or defensive code</pattern>
     </forbidden-patterns>
     <correct-patterns>
-      <pattern name="Reading variables">directly `std::cin &gt;&gt; n;`, no checks</pattern>
+      <pattern name="Reading variables">directly `cin &gt;&gt; n;`, no checks</pattern>
       <pattern name="Multiple test cases">
-int t;std::cin &gt;&gt; t;
+int t;cin &gt;&gt; t;
 while(t--) solve();
       </pattern>
-      <pattern name="Single test case">directly `std::cin &gt;&gt; n;` then process</pattern>
+      <pattern name="Single test case">directly `cin &gt;&gt; n;` then process</pattern>
     </correct-patterns>
   </guideline>
 
   <guideline name="Main Function Template">
     <description>The `main` function must start with IO acceleration:</description>
     <template language="cpp">
-std::ios::sync_with_stdio(false);
-std::cin.tie(nullptr);
+ios::sync_with_stdio(false);
+cin.tie(nullptr);
     </template>
     <rule>Encapsulate the main logic in a `void solve()` function</rule>
     <rule>`main` function only handles IO acceleration and calling `solve`</rule>
@@ -100,13 +99,34 @@ std::cin.tie(nullptr);
     <rule name="Brace Style">K&amp;R style - opening brace `{` on the same line as function/loop declaration</rule>
     <rule name="Compactness">Compact style - multiple short statements can be on one line separated by semicolons</rule>
     <rule name="Minimal Whitespace">Minimize blank lines, no extra spacing</rule>
-    <rule name="Naming">Use short variable names (n, m, t, ans, res, dp, vis, adj)</rule>
+  </guideline>
+
+  <guideline name="Variable Naming" priority="critical">
+    <rule>Use extremely short variable names like top competitive programmers</rule>
+    <rule>Single letters or 2-3 letter abbreviations only</rule>
+    <forbidden>Underscores in variable names (e.g., max_val, cur_sum, left_ptr)</forbidden>
+    <forbidden>Long descriptive names (e.g., currentIndex, totalSum, leftPointer)</forbidden>
     <examples>
-      <correct>int main() {</correct>
-      <correct>for (int i = 0; i &lt; n; i++) {</correct>
-      <correct>int n, m;std::cin &gt;&gt; n &gt;&gt; m;</correct>
-      <wrong>int main()\n{</wrong>
+      <correct>n, m, k, t, i, j, x, y, a, b, c, ans, res, dp, vis, adj, cnt, sum, mx, mn, l, r, mid, cur, pre, nxt, sz, pos, idx, tmp, ret, ok, f, g, h, u, v, w, p, q, d, e, s</correct>
+      <wrong>max_value, current_sum, left_index, right_index, total_count, is_valid, node_count</wrong>
     </examples>
+    <mapping>
+      <map from="max_value/maximum" to="mx"/>
+      <map from="min_value/minimum" to="mn"/>
+      <map from="current" to="cur"/>
+      <map from="previous" to="pre"/>
+      <map from="next" to="nxt"/>
+      <map from="count" to="cnt"/>
+      <map from="result" to="res"/>
+      <map from="answer" to="ans"/>
+      <map from="index" to="idx"/>
+      <map from="position" to="pos"/>
+      <map from="size" to="sz"/>
+      <map from="temporary" to="tmp"/>
+      <map from="left" to="l"/>
+      <map from="right" to="r"/>
+      <map from="distance" to="d"/>
+    </mapping>
   </guideline>
 
   <guideline name="No Comments" priority="critical">
@@ -129,6 +149,7 @@ Below is a complete example of the expected output style:
 
 ```cpp
 #include &lt;bits/stdc++.h&gt;
+using namespace std;
 #define ranges std::ranges
 #define views std::views
 using u32 = unsigned;
@@ -136,31 +157,31 @@ using i64 = long long;
 using u64 = unsigned long long;
 using u128 = unsigned __int128;
 using i128 = __int128;
-using a2 = std::array&lt;int, 2&gt;;
-using a3 = std::array&lt;int, 3&gt;;
-using a4 = std::array&lt;int, 4&gt;;
+using a2 = array&lt;int, 2&gt;;
+using a3 = array&lt;int, 3&gt;;
+using a4 = array&lt;int, 4&gt;;
 constexpr int N = 2e5 + 5;
 constexpr int MAXN = 2e5 + 5;
 constexpr int inf = 1e9;
 constexpr i64 mod = 998244353;
 
 void solve() {
-    int n, m;std::cin &gt;&gt; n &gt;&gt; m;
-    std::vector&lt;int&gt; a(n);
-    for (int i = 0; i &lt; n; i++) std::cin &gt;&gt; a[i];
+    int n, m;cin &gt;&gt; n &gt;&gt; m;
+    vector&lt;int&gt; a(n);
+    for (int i = 0; i &lt; n; i++) cin &gt;&gt; a[i];
     i64 ans = 0;
     for (int i = 0; i &lt; n; i++) {
         for (int j = i + 1; j &lt; n; j++) {
             ans += a[i] * a[j];
         }
     }
-    std::cout &lt;&lt; ans &lt;&lt; "\n";
+    cout &lt;&lt; ans &lt;&lt; "\n";
 }
 
 int main() {
-    std::ios::sync_with_stdio(false);
-    std::cin.tie(nullptr);
-    int t;std::cin &gt;&gt; t;
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t;cin &gt;&gt; t;
     while (t--) solve();
     return 0;
 }
@@ -294,6 +315,7 @@ class CppTranslator:
 
         if code:
             code = self._remove_comments(code)
+            code = self._remove_std_prefix(code)
 
         return code
 
@@ -339,3 +361,16 @@ class CppTranslator:
             i += 1
 
         return ''.join(result)
+
+    def _remove_std_prefix(self, code: str) -> str:
+        """移除代码中的 std:: 前缀（但保留 std::ranges 和 std::views 的宏定义）。"""
+        lines = code.split('\n')
+        result = []
+        for line in lines:
+            # 保留 #define 行不变
+            if line.strip().startswith('#define'):
+                result.append(line)
+            else:
+                # 去掉 std:: 前缀
+                result.append(line.replace('std::', ''))
+        return '\n'.join(result)
